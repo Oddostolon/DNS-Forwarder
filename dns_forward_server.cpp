@@ -5,27 +5,13 @@
 
 int dns_forward_server::init(std::string upstream_address, int upstream_port)
 {
-    int network_socket_client = socket(AF_INET, SOCK_DGRAM, 0);
-    if (network_socket_client == -1)
-    {
-        std::cerr << "Error: Can't create socket" << std::endl;
-        return -1;
-    }
-
-    int network_socket_upstream = socket(AF_INET, SOCK_DGRAM, 0);
-    if (network_socket_upstream == -1)
-    {
-        std::cerr << "Error: Can't create socket" << std::endl;
-        return -1;
-    }
+    network_socket_client = socket(AF_INET, SOCK_DGRAM, 0);
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(SERVER_PORT);
     inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr);
 
-    upstream_server.sin_family = AF_INET;
-    upstream_server.sin_port = htons(upstream_port);
-    inet_pton(AF_INET, upstream_address.c_str(), &(upstream_server.sin_addr));
+    bind(network_socket_client, (sockaddr*)&server_address, sizeof(server_address));
 
     return 0;
 }
@@ -61,13 +47,7 @@ int dns_forward_server::receive_message_into_buffer(sockaddr_in sender_address, 
 
 int dns_forward_server::run(std::string upstream_address, int upstream_port)
 {
-    network_socket_client = socket(AF_INET, SOCK_DGRAM, 0);
-
-    server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(SERVER_PORT);
-    inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr);
-
-    bind(network_socket_client, (sockaddr*)&server_address, sizeof(server_address));
+    
 
     char buf[BUFLEN];
 

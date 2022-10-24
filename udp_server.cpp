@@ -18,5 +18,7 @@ int main(int argc, char* argv[])
     std::string upstream_address = "8.8.8.8";
     dns_forward_server server; 
 
+    server.init(upstream_address, upstream_port);
+
     return server.run(upstream_address, upstream_port);
 }
