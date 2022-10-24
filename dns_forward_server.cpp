@@ -34,36 +34,7 @@ int dns_forward_server::init(std::string upstream_address, int upstream_port)
     return 0;
 }
 
-int dns_forward_server::send_message_from_buffer(int message_size, int sockaddr_size)
-{
-    return sendto
-                (
-                    network_socket_upstream, 
-                    buffer, 
-                    message_size, 
-                    0, 
-                    (sockaddr*)&upstream_server, 
-                    sockaddr_size
-                );
-}
-
-int dns_forward_server::receive_message_into_buffer(sockaddr_in sender_address, socklen_t sender_address_size)
-{
-
-    int bytes_received = recvfrom
-                            (
-                                network_socket_client, 
-                                buffer, 
-                                BUFLEN, 
-                                0, 
-                                (sockaddr*)&sender_address, 
-                                &sender_address_size
-                            );
-
-    return bytes_received;
-}
-
-int dns_forward_server::run(std::string upstream_address, int upstream_port)
+int dns_forward_server::run()
 {
     socklen_t upstream_server_size = sizeof(upstream_server);
 

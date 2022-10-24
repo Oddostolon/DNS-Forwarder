@@ -20,5 +20,5 @@ int main(int argc, char* argv[])
 
     server.init(upstream_address, upstream_port);
 
-    return server.run(upstream_address, upstream_port);
+    return server.run();
 }

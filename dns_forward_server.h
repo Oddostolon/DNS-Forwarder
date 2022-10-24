@@ -10,8 +10,8 @@
 class dns_forward_server
 {
     public: 
-        int run(std::string upstream_address, int upstream_port);
         int init(std::string upstream_address, int upstream_port);
+        int run();
         ~dns_forward_server()
         {
             close(network_socket_client);
