@@ -1,0 +1,35 @@
+18:36:37 **** Build of configuration Debug for project FSecure ****
+make all 
+Building file: ../src/FSecure.cpp
+Invoking: GCC C++ Compiler
+g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/FSecure.d" -MT"src/FSecure.o" -o "src/FSecure.o" "../src/FSecure.cpp"
+Finished building: ../src/FSecure.cpp
+ 
+Building target: FSecure
+Invoking: GCC C++ Linker
+g++  -o "FSecure" ./src/FSecure.o   
+Finished building target: FSecure
+ 
+
+**** Build of configuration Debug for project Homework ****
+
+Nothing to build for project Homework
+18:36:52 **** Incremental Build of configuration Debug for project FSecure ****
+make all 
+Building file: ../src/FSecure.cpp
+Invoking: GCC C++ Compiler
+g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/FSecure.d" -MT"src/FSecure.o" -o "src/FSecure.o" "../src/FSecure.cpp"
+Finished building: ../src/FSecure.cpp
+ 
+Building target: FSecure
+Invoking: GCC C++ Linker
+g++  -o "FSecure" ./src/FSecure.o   
+Finished building target: FSecure
+ 
+
+**** Build of configuration Debug for project Homework ****
+
+Nothing to build for project Homework
+18:37:08 **** Incremental Build of configuration Debug for project FSecure ****
+make all 
+make: Nothing to be done for 'all'.

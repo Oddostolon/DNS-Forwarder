@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include/KF5/KDESu/kdesu",
+                "/usr/include/qt/QtCore",
+                "/usr/include/qt",
+                "/usr/include/KF5/KDESu",
+                "/usr/include/KF5/KPty"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
