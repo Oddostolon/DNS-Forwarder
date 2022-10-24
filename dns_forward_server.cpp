@@ -5,12 +5,14 @@
 
 int dns_forward_server::init(std::string upstream_address, int upstream_port)
 {
-    network_socket_client = socket(AF_INET, SOCK_DGRAM, 0);
+    network_socket_client = socket(AF_INET6, SOCK_DGRAM, 0);
     if (network_socket_client == -1)
     {
         std::cerr << "Error creating client socket." << std::endl;
         return -1;
     }
+
+    setsockopt(network_socket_client, IPPROTO_UDP, IPV6_V6ONLY, 0, sizeof(0));
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(SERVER_PORT);
