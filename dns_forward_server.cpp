@@ -1,20 +1,17 @@
 #include "dns_forward_server.h"
+#include <poll.h>
 
 #define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 9999
+#define SERVER_PORT 9000
 
-int dns_forward_server::init(std::string upstream_address, int upstream_port)
+int dns_forward_server::init_ipv4_resources(std::string upstream_address, int upstream_port)
 {
-    network_socket_client = socket(AF_INET6, SOCK_DGRAM, 0);
+    network_socket_client = socket(AF_INET, SOCK_DGRAM, 0);
     if (network_socket_client == -1)
     {
-        std::cerr << "Error creating client socket." << std::endl;
+        std::cerr << "Error creating IPv4 client socket." << std::endl << strerror(errno) << std::endl;
         return -1;
     }
-
-    // int no = 0;
-    // int i = setsockopt(network_socket_client, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)); 
-    // std::cout << i << std::endl;
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(SERVER_PORT);
@@ -23,18 +20,14 @@ int dns_forward_server::init(std::string upstream_address, int upstream_port)
     int bind_result = bind(network_socket_client, (sockaddr*)&server_address, sizeof(server_address));
     if (bind_result == -1)
     {
-        std::cerr << "binding failed" << std::endl;
-        std::cerr << errno << std::endl; 
-        
-        std::cerr << strerror(errno) << std::endl;
-
+        std::cerr << "Binding IPv4 socket failed: " << std::endl << strerror(errno) << std::endl;
         return -1;
     }
 
     network_socket_upstream = socket(AF_INET, SOCK_DGRAM, 0);
     if (network_socket_upstream == -1)
     {
-        std::cerr << "Error creating upstream socket." << std::endl;
+        std::cerr << "Error creating upstream IPv4 socket." << std::endl << strerror(errno) << std::endl;
         return -1;
     }
 
@@ -42,7 +35,156 @@ int dns_forward_server::init(std::string upstream_address, int upstream_port)
     upstream_server.sin_port = htons(upstream_port);
     inet_pton(AF_INET, upstream_address.c_str(), &(upstream_server.sin_addr));
 
+    return 0;
+}
+
+int dns_forward_server::init_ipv6_resources(std::string upstream_address, int upstream_port)
+{
+    network_socket_client_6 = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (network_socket_client == -1)
+    {
+        std::cerr << "Error creating IPv6 client socket." << std::endl << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    server_address_6.sin6_family = AF_INET6;
+    server_address_6.sin6_port = htons(SERVER_PORT);
+    inet_pton(AF_INET6, SERVER_IP, &server_address_6.sin6_addr);
+
+    int bind_result = bind(network_socket_client_6, (sockaddr*)&server_address_6, sizeof(server_address_6));
+    if (bind_result == -1)
+    {
+        std::cerr << "Binding IPv6 socket failed: " << std::endl << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    network_socket_upstream_6 = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (network_socket_upstream == -1)
+    {
+        std::cerr << "Error creating upstream IPv6 socket." << std::endl << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    upstream_server_6.sin6_family = AF_INET6;
+    upstream_server_6.sin6_port = htons(upstream_port);
+    inet_pton(AF_INET, upstream_address.c_str(), &(upstream_server_6.sin6_addr));
+
+    return 0;
+}
+
+int dns_forward_server::init(std::string upstream_address, int upstream_port)
+{
+    int init_result = init_ipv4_resources(upstream_address, upstream_port);
+    if (init_result == -1)
+    {
+        return -1; 
+    }
+
+    int init_result_6 = init_ipv6_resources(upstream_address, upstream_port);
+    if (init_result_6 == -1)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
+int dns_forward_server::forward_ipv4_request()
+{
+    socklen_t upstream_server_size = sizeof(upstream_server);
+
+    sockaddr_in client_address;
+    socklen_t client_size = sizeof(client_address);
+
+    int bytes_from_client = recvfrom(network_socket_client, buffer, BUFLEN, 0, (sockaddr*)&client_address, &client_size);
+    if (bytes_from_client == -1)
+    {
+        std::cerr << "Error receiving client request." << std::endl;
+        return -1; 
+    }
     
+    int upstream_relay_response = sendto
+                            (
+                                network_socket_upstream,
+                                buffer,
+                                bytes_from_client + 1,
+                                0,
+                                (sockaddr*)&upstream_server,
+                                upstream_server_size
+                            );
+    if (upstream_relay_response == -1)
+    {
+        std::cerr << "Error forwarding client request to upstream server." << std::endl;
+        return -1;
+    }
+
+    memset(buffer, 0, BUFLEN);
+
+    int bytes_from_upstream = recvfrom(network_socket_upstream, buffer, BUFLEN, 0, (sockaddr*)&upstream_server, &upstream_server_size);
+    if (bytes_from_upstream == -1)
+    {
+        std::cerr << "Error receiving upstream server response." << std::endl;
+        return -1;
+    }
+
+    int client_relay_response = sendto(network_socket_client, buffer, bytes_from_upstream + 1, 0, (sockaddr*)&client_address, client_size);
+    if (client_relay_response == -1)
+    {
+        std::cerr << "Error forwarding upstream server response to client." << std::endl; 
+        return -1;
+    }
+
+    return 0;
+}
+
+int dns_forward_server::forward_ipv6_request() 
+{
+    socklen_t upstream_server_size = sizeof(upstream_server_6);
+
+    sockaddr_in client_address;
+    socklen_t client_size = sizeof(client_address);
+
+    int bytes_from_client = recvfrom(network_socket_client_6, buffer, BUFLEN, 0, (sockaddr*)&client_address, &client_size);
+    if (bytes_from_client == -1)
+    {
+        std::cerr << "Error receiving client request." << std::endl;
+        std::cerr << strerror(errno) << std::endl;
+        return -1; 
+    }
+    
+    int upstream_relay_response = sendto
+                            (
+                                network_socket_upstream_6,
+                                buffer,
+                                bytes_from_client + 1,
+                                0,
+                                (sockaddr*)&upstream_server_6,
+                                upstream_server_size
+                            );
+    if (upstream_relay_response == -1)
+    {
+        std::cerr << "Error forwarding client request to upstream server." << std::endl;
+        std::cerr << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    memset(buffer, 0, BUFLEN);
+
+    int bytes_from_upstream = recvfrom(network_socket_upstream_6, buffer, BUFLEN, 0, (sockaddr*)&upstream_server_6, &upstream_server_size);
+    if (bytes_from_upstream == -1)
+    {
+        std::cerr << "Error receiving upstream server response." << std::endl;
+        std::cerr << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    int client_relay_response = sendto(network_socket_client, buffer, bytes_from_upstream + 1, 0, (sockaddr*)&client_address, client_size);
+    if (client_relay_response == -1)
+    {
+        std::cerr << "Error forwarding upstream server response to client." << std::endl; 
+        std::cerr << strerror(errno) << std::endl;
+        return -1;
+    }
 
     return 0;
 }
@@ -51,50 +193,46 @@ int dns_forward_server::run()
 {
     socklen_t upstream_server_size = sizeof(upstream_server);
 
-    while (true)
+    pollfd pfds[2];
+
+    pfds[0].fd = network_socket_client;
+    pfds[0].events = POLLIN;
+
+    pfds[1].fd = network_socket_client_6;
+    pfds[1].fd = POLLIN;
+
+    int fd_count = 2;
+
+    for(;;)
     {
         memset(buffer, 0, BUFLEN);
-        
-        sockaddr_in client_address;
-        socklen_t client_size = sizeof(client_address);
 
-        int bytes_from_client = recvfrom(network_socket_client, buffer, BUFLEN, 0, (sockaddr*)&client_address, &client_size);
-        if (bytes_from_client == -1)
+        int poll_count = poll(pfds, fd_count, -1);
+        if (poll_count == -1)
         {
-            std::cerr << "Error receiving client request." << std::endl;
-            continue; 
+            std::cerr << "polls failed" << std::endl; 
+            exit(1);
         }
 
-        
-        int upstream_relay_response = sendto
-                                (
-                                    network_socket_upstream,
-                                    buffer,
-                                    bytes_from_client + 1,
-                                    0,
-                                    (sockaddr*)&upstream_server,
-                                    upstream_server_size
-                                );
-        if (upstream_relay_response == -1)
+        for (int i = 0; i < fd_count; i++)
         {
-            std::cerr << "Error forwarding client request to upstream server." << std::endl;
-            continue;
-        }
+            if (pfds[i].fd == network_socket_client)
+            {
+                int forwarding_result = forward_ipv4_request();
+                if (forwarding_result == -1)
+                {
+                    return -1;
+                }
+            }
 
-        memset(buffer, 0, BUFLEN);
-
-        int bytes_from_upstream = recvfrom(network_socket_upstream, buffer, BUFLEN, 0, (sockaddr*)&upstream_server, &upstream_server_size);
-        if (bytes_from_upstream == -1)
-        {
-            std::cerr << "Error receiving upstream server response." << std::endl;
-            continue;
-        }
-
-        int client_relay_response = sendto(network_socket_client, buffer, bytes_from_upstream + 1, 0, (sockaddr*)&client_address, client_size);
-        if (client_relay_response == -1)
-        {
-            std::cerr << "Error forwarding upstream server response to client." << std::endl; 
-            continue;
+            if (pfds[i].fd == network_socket_client_6)
+            {
+                int forwarding_result = forward_ipv6_request();
+                if (forwarding_result == -1)
+                {
+                    return -1;
+                }
+            }
         }
     }
 
