@@ -1,10 +1,16 @@
 #include "dns_forward_server.h"
 #include <poll.h>
+#include <iostream>
+#include <bits/stdc++.h>
+#include <csignal>
+
 
 #define SERVER_IP "127.0.0.1"
+#define SERVER_IP_6 "::1"
 #define SERVER_PORT 9000
 
-int dns_forward_server::init_ipv4_resources(std::string upstream_address, int upstream_port)
+
+int dns_forward_server::init_ipv4_resources()
 {
     network_socket_client = socket(AF_INET, SOCK_DGRAM, 0);
     if (network_socket_client == -1)
@@ -24,6 +30,36 @@ int dns_forward_server::init_ipv4_resources(std::string upstream_address, int up
         return -1;
     }
 
+    return 0;
+}
+
+int dns_forward_server::init_ipv6_resources()
+{
+    network_socket_client_6 = socket(AF_INET6, SOCK_DGRAM, 0);
+    if (network_socket_client == -1)
+    {
+        std::cerr << "Error creating IPv6 client socket." << std::endl << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    server_address_6.sin6_family = AF_INET6;
+    server_address_6.sin6_port = htons(SERVER_PORT);
+    inet_pton(AF_INET6, SERVER_IP_6, &server_address_6.sin6_addr);
+
+    int bind_result = bind(network_socket_client_6, (sockaddr*)&server_address_6, sizeof(server_address_6));
+    if (bind_result == -1)
+    {
+        std::cerr << "Binding IPv6 socket failed: " << std::endl << strerror(errno) << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
+int dns_forward_server::init_ipv4_upstream_resources(std::string upstream_address, int upstream_port)
+{
+    is_ipv4 = 1; 
+    
     network_socket_upstream = socket(AF_INET, SOCK_DGRAM, 0);
     if (network_socket_upstream == -1)
     {
@@ -38,25 +74,9 @@ int dns_forward_server::init_ipv4_resources(std::string upstream_address, int up
     return 0;
 }
 
-int dns_forward_server::init_ipv6_resources(std::string upstream_address, int upstream_port)
+int dns_forward_server::init_ipv6_upstream_resources(std::string upstream_address, int upstream_port)
 {
-    network_socket_client_6 = socket(AF_INET6, SOCK_DGRAM, 0);
-    if (network_socket_client == -1)
-    {
-        std::cerr << "Error creating IPv6 client socket." << std::endl << strerror(errno) << std::endl;
-        return -1;
-    }
-
-    server_address_6.sin6_family = AF_INET6;
-    server_address_6.sin6_port = htons(SERVER_PORT);
-    inet_pton(AF_INET6, SERVER_IP, &server_address_6.sin6_addr);
-
-    int bind_result = bind(network_socket_client_6, (sockaddr*)&server_address_6, sizeof(server_address_6));
-    if (bind_result == -1)
-    {
-        std::cerr << "Binding IPv6 socket failed: " << std::endl << strerror(errno) << std::endl;
-        return -1;
-    }
+    is_ipv4 = 0;
 
     network_socket_upstream_6 = socket(AF_INET6, SOCK_DGRAM, 0);
     if (network_socket_upstream == -1)
@@ -74,13 +94,32 @@ int dns_forward_server::init_ipv6_resources(std::string upstream_address, int up
 
 int dns_forward_server::init(std::string upstream_address, int upstream_port)
 {
-    int init_result = init_ipv4_resources(upstream_address, upstream_port);
+    is_ipv4 = -1;
+
+    std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
+
+    if (std::regex_match(upstream_address, ipv4))
+    {
+        int init_upstream_result = init_ipv4_upstream_resources(upstream_address, upstream_port);
+        if(init_upstream_result == -1)
+        {
+            return -1;
+        }
+    }
+
+    int init_upstream_result = init_ipv6_upstream_resources(upstream_address, upstream_port);
+    if (init_upstream_result == -1)
+    {
+        return -1;
+    }
+
+    int init_result = init_ipv4_resources();
     if (init_result == -1)
     {
         return -1; 
     }
 
-    int init_result_6 = init_ipv6_resources(upstream_address, upstream_port);
+    int init_result_6 = init_ipv6_resources();
     if (init_result_6 == -1)
     {
         return -1;

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <memory>
 
+
 #define BUFLEN 1024
 
 class dns_forward_server
@@ -22,9 +23,13 @@ class dns_forward_server
 
     private: 
         char buffer[BUFLEN];
+        int is_ipv4;
 
-        int init_ipv4_resources(std::string upstream_address, int upstream_port);
-        int init_ipv6_resources(std::string upstream_address, int upstream_port);
+        int init_ipv4_resources();
+        int init_ipv6_resources();
+
+        int init_ipv4_upstream_resources(std::string upstream_address, int upstream_port);
+        int init_ipv6_upstream_resources(std::string upstream_address, int upstream_port);
 
         int forward_ipv4_request();
         int forward_ipv6_request();
