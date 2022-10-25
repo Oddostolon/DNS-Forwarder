@@ -12,14 +12,25 @@ int dns_forward_server::init(std::string upstream_address, int upstream_port)
         return -1;
     }
 
-    setsockopt(network_socket_client, IPPROTO_UDP, IPV6_V6ONLY, 0, sizeof(0));
+    // int no = 0;
+    // int i = setsockopt(network_socket_client, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)); 
+    // std::cout << i << std::endl;
 
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(SERVER_PORT);
     inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr);
 
-    bind(network_socket_client, (sockaddr*)&server_address, sizeof(server_address));
-    
+    int bind_result = bind(network_socket_client, (sockaddr*)&server_address, sizeof(server_address));
+    if (bind_result == -1)
+    {
+        std::cerr << "binding failed" << std::endl;
+        std::cerr << errno << std::endl; 
+        
+        std::cerr << strerror(errno) << std::endl;
+
+        return -1;
+    }
+
     network_socket_upstream = socket(AF_INET, SOCK_DGRAM, 0);
     if (network_socket_upstream == -1)
     {

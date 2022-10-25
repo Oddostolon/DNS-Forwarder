@@ -14,6 +14,10 @@ int main()
 {
     int network_socket = socket(AF_INET, SOCK_DGRAM, 0);
 
+    int no = 0;
+    int i = setsockopt(network_socket, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)); 
+    std::cout << i << std::endl;
+
     sockaddr_in server_address;
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(SERVER_PORT);
@@ -37,9 +41,13 @@ int main()
         upstream_server.sin_port = htons(UPSTREAM_PORT);
         inet_pton(AF_INET, UPSTREAM_SERVER, &(upstream_server.sin_addr));
 
+        int network_socket_upstream = socket(AF_INET, SOCK_DGRAM, 0);
+        i = setsockopt(network_socket_upstream, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&no, sizeof(no)); 
+        std::cout << i << std::endl;
+
         int relay_response = sendto
                                     (
-                                        network_socket,
+                                        network_socket_upstream,
                                         buf,
                                         bytes_from_client + 1,
                                         0,
@@ -49,7 +57,7 @@ int main()
 
         memset(buf, 0, BUFLEN);
 
-        int bytes_from_upstream = recvfrom(network_socket, buf, BUFLEN, 0, (sockaddr*)&upstream_server, &upstream_server_size);
+        int bytes_from_upstream = recvfrom(network_socket_upstream, buf, BUFLEN, 0, (sockaddr*)&upstream_server, &upstream_server_size);
 
         sendto(network_socket, buf, bytes_from_upstream + 1, 0, (sockaddr*)&client_address, clientSize);
     }
