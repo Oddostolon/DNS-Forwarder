@@ -34,6 +34,8 @@ class dns_forward_server
         int forward_ipv4_request();
         int forward_ipv6_request();
 
+        static void signal_handler(int signal);
+
         // IPv4 resources
         sockaddr_in server_address;
         sockaddr_in upstream_server;

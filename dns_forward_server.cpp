@@ -2,7 +2,7 @@
 #include <poll.h>
 #include <iostream>
 #include <bits/stdc++.h>
-#include <csignal>
+#include <signal.h>
 
 
 #define SERVER_IP "127.0.0.1"
@@ -228,8 +228,26 @@ int dns_forward_server::forward_ipv6_request()
     return 0;
 }
 
+void dns_forward_server::signal_handler(int signal)
+{
+    if (signal == SIGINT || signal == SIGTERM)
+    {
+        std::cout << "Interrupt signal received, shutting down." << std::endl;
+        exit(signal);
+    }
+}
+
 int dns_forward_server::run()
 {
+    struct sigaction signal_action;
+    signal_action.sa_handler = &signal_handler;
+    sigemptyset(&signal_action.sa_mask);
+    signal_action.sa_flags = 0;
+    if (sigaction(SIGINT, &signal_action, NULL) != 0) 
+    {
+        std::cerr << "Failed to register signal handler:" << std::endl << strerror(errno) << std::endl;
+    }
+
     socklen_t upstream_server_size = sizeof(upstream_server);
 
     pollfd pfds[2];
