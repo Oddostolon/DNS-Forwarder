@@ -5,11 +5,6 @@
 #include <string.h>
 #include <bits/stdc++.h>
 #include "dns_forward_server.h"
-
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 9000
-#define UPSTREAM_SERVER "8.8.8.8"
-#define UPSTREAM_PORT 53
  
 using namespace std;
 
