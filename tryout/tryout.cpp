@@ -108,6 +108,63 @@ int main()
                 if (pfds[i].fd == network_socket_6)
                 {
                     std::cout << "IPv6 found!" << std::endl;
+
+                    sockaddr_in6 client_address;
+                    socklen_t client_size = sizeof(client_address);
+
+                    char buffer[BUFLEN];
+
+                    int bytes_from_client = recvfrom(network_socket_6, buffer, BUFLEN, 0, (sockaddr*)&client_address, &client_size);
+                    if (bytes_from_client == -1)
+                    {
+                        std::cerr << "Error receiving client request" << std::endl;
+                        continue;
+                    }
+
+                    std::cout << buffer << std::endl;
+
+                    int network_socket_upstream = socket(AF_INET6, SOCK_DGRAM, 0);
+
+                    sockaddr_in6 upstream_server;
+                    upstream_server.sin6_family = AF_INET6;
+                    upstream_server.sin6_port = htons(53);
+                    inet_pton(AF_INET6, "2606:4700:4700::1111", &(upstream_server.sin6_addr));
+
+                    socklen_t upstream_server_size = sizeof(upstream_server);
+
+                    int upstream_relay_response = sendto
+                                (
+                                    network_socket_upstream,
+                                    buffer,
+                                    bytes_from_client + 1,
+                                    0,
+                                    (sockaddr*)&upstream_server,
+                                    upstream_server_size
+                                );
+                    if (upstream_relay_response == -1)
+                    {
+                        std::cerr << "Error forwarding client request to upstream server." << std::endl;
+                        std::cerr << errno << " " << strerror(errno) << std::endl;
+                        continue;
+                    }
+
+                    memset(buffer, 0, 1024);
+
+                    int bytes_from_upstream = recvfrom(network_socket_upstream, buffer, BUFLEN, 0, (sockaddr*)&upstream_server, &upstream_server_size);
+                    if (bytes_from_upstream == -1)
+                    {
+                        std::cerr << "Error receiving upstream server response." << std::endl;
+                        continue;
+                    }
+
+                    int client_relay_response = sendto(network_socket_6, buffer, bytes_from_upstream + 1, 0, (sockaddr*)&client_address, client_size);
+                    if (client_relay_response == -1)
+                    {
+                        std::cerr << "Error forwarding upstream server response to client." << std::endl; 
+                        continue;
+                    }
+
+                    std::cout << buffer << std::endl;
                 }
             }
         }
